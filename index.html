@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>색깔 모양 놀이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   색 토큰 — 놀이방(벽/바닥) + 원목 모양상자
+   ========================================================= */
+:root{
+  --wall:#E3F0F7; --floor:#CFE7D4; --ink:#22304D; --ink-soft:#5B6A88;
+  --card:#FFFFFF; --panel:#FFFFFF; --line:#D5E0EA;
+  --wood:#EBC793; --wood-edge:#C2965A; --hole:#3B2E28;
+  --focus:#2F7DE1;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --wall:#1D2841; --floor:#213A31; --ink:#EEF3FA; --ink-soft:#A8B5CB;
+    --card:#2A3656; --panel:#25314D; --line:#3A4767;
+    --wood:#C9A06A; --wood-edge:#94703F; --hole:#1A1411; --focus:#7FB3FF;
+  }
+}
+:root[data-theme="dark"]{
+  --wall:#1D2841; --floor:#213A31; --ink:#EEF3FA; --ink-soft:#A8B5CB;
+  --card:#2A3656; --panel:#25314D; --line:#3A4767;
+  --wood:#C9A06A; --wood-edge:#94703F; --hole:#1A1411; --focus:#7FB3FF;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  height:100%;margin:0;overflow:hidden;background:var(--wall);color:var(--ink);
+  font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+button:focus-visible{outline:6px solid var(--focus);outline-offset:6px;border-radius:24px}
+#app{position:relative;height:100%;overflow:hidden}
+.floor{position:absolute;left:0;right:0;bottom:0;height:26%;background:var(--floor)}
+
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center}
+.screen.active{display:flex}
+
+/* ---------- 시작 화면: 글자 블록 ---------- */
+.title-blocks{display:flex;gap:1.6vmin;flex-wrap:wrap;justify-content:center;margin-bottom:5vmin}
+.tb{
+  width:13vmin;height:13vmin;min-width:64px;min-height:64px;border-radius:2.2vmin;
+  display:grid;place-items:center;font-size:clamp(34px,8vmin,96px);color:#fff;
+  border-bottom:1.4vmin solid rgba(0,0,0,.22);
+}
+.tb.gap{background:none;border:0;width:3vmin;min-width:12px}
+.tb:nth-child(1){transform:rotate(-4deg)} .tb:nth-child(3){transform:rotate(3deg)}
+.tb:nth-child(6){transform:rotate(-3deg)} .tb:nth-child(8){transform:rotate(4deg)}
+.start-btn{
+  display:flex;align-items:center;gap:2.4vmin;padding:3vmin 7vmin;border-radius:999px;
+  background:var(--ink);color:var(--wall);font-size:clamp(28px,6vmin,72px);
+  border-bottom:1.2vmin solid rgba(0,0,0,.3);
+}
+.start-btn svg{width:6vmin;height:6vmin;min-width:28px;min-height:28px}
+.start-note{margin-top:4vmin;font-size:clamp(14px,2.3vmin,22px);color:var(--ink-soft);text-align:center;line-height:1.6;padding:0 6vw}
+
+/* ---------- 메뉴 ---------- */
+.menu-row{display:flex;gap:4vmin;align-items:flex-end;justify-content:center;flex-wrap:wrap;padding:0 4vw;position:relative;z-index:1}
+.menu-card{
+  width:clamp(170px,32vmin,360px);background:var(--card);border-radius:4vmin;
+  padding:3vmin 3vmin 2.4vmin;display:flex;flex-direction:column;align-items:center;gap:1.6vmin;
+  border-bottom:1.8vmin solid var(--accent);transition:transform .25s ease;
+}
+.menu-card:active{transform:translateY(1vmin)}
+.menu-card svg{width:100%;height:auto;aspect-ratio:1}
+.menu-card span{font-size:clamp(20px,4.2vmin,48px);white-space:nowrap}
+
+/* ---------- 활동 공통 ---------- */
+.topbar{position:absolute;top:2.5vmin;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:5}
+.dots{display:flex;gap:1.2vmin;background:color-mix(in srgb,var(--card) 70%,transparent);padding:1.2vmin 2vmin;border-radius:999px}
+.dot{width:2.4vmin;height:2.4vmin;min-width:12px;min-height:12px;border-radius:50%;background:var(--line);transition:background .3s ease,transform .3s ease}
+.dot.on{background:var(--ink);transform:scale(1.15)}
+.home-btn{
+  position:absolute;top:2vmin;right:2vmin;z-index:6;width:clamp(56px,9vmin,96px);height:clamp(56px,9vmin,96px);
+  border-radius:50%;background:var(--card);display:grid;place-items:center;border-bottom:.8vmin solid var(--line);
+}
+.home-btn[hidden]{display:none}
+.home-btn svg{width:55%;height:55%}
+.home-btn.armed{background:var(--ink)}
+.home-btn.armed svg path{stroke:var(--wall)}
+.home-btn .tip{position:absolute;right:110%;white-space:nowrap;background:var(--ink);color:var(--wall);padding:.8vmin 1.6vmin;border-radius:999px;font-size:clamp(14px,2.2vmin,22px);opacity:0;transition:opacity .2s}
+.home-btn.armed .tip{opacity:1}
+.hint{
+  position:absolute;bottom:2.4vmin;left:50%;transform:translateX(-50%);z-index:4;max-width:min(90vw,900px);
+  background:var(--card);color:var(--ink-soft);border-radius:999px;padding:1.2vmin 3vmin;
+  font-size:clamp(14px,2.4vmin,24px);text-align:center;display:flex;gap:1.4vmin;align-items:center;
+}
+.hint::before{content:"선생님 발문";color:var(--ink);background:var(--wall);border-radius:999px;padding:.4vmin 1.4vmin;font-size:.85em;flex:none}
+.hint[hidden]{display:none}
+
+/* ---------- 활동1: 풍선 ---------- */
+.field{position:absolute;inset:0;overflow:hidden}
+.balloon{position:absolute;left:0;top:0;width:clamp(120px,20vmin,240px);will-change:transform;z-index:2}
+.balloon svg{width:100%;height:auto;display:block;pointer-events:none}
+.balloon.popped svg{animation:pop .3s ease-out forwards}
+@keyframes pop{to{transform:scale(1.35);opacity:0}}
+.spark{position:absolute;width:3vmin;height:3vmin;border-radius:50%;pointer-events:none;z-index:3;animation:spark .5s ease-out forwards}
+@keyframes spark{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+
+/* ---------- 활동2: 같은 색 ---------- */
+.match-wrap{display:flex;flex-direction:column;align-items:center;gap:5vmin;position:relative;z-index:1;margin-top:12vmin}
+.target{
+  width:clamp(140px,27vmin,300px);aspect-ratio:1;background:var(--card);border-radius:4vmin;
+  display:grid;place-items:center;padding:3vmin;transition:transform .8s cubic-bezier(.3,.7,.3,1);
+  border-bottom:1.4vmin solid var(--line);
+}
+.target svg,.choice svg{width:100%;height:100%}
+.choices{display:flex;gap:5vmin;justify-content:center}
+.choice{
+  width:clamp(120px,23vmin,260px);aspect-ratio:1;background:var(--card);border-radius:4vmin;padding:2.6vmin;
+  border-bottom:1.4vmin solid var(--line);transition:transform .8s cubic-bezier(.3,.7,.3,1),opacity .4s ease;
+  position:relative;z-index:2;
+}
+.choice.wiggle{animation:wiggle .6s ease}
+@keyframes wiggle{20%{transform:rotate(-6deg)}40%{transform:rotate(5deg)}60%{transform:rotate(-3deg)}80%{transform:rotate(2deg)}}
+.choice.fade{opacity:0;pointer-events:none}
+.choice.matched,.target.matched{border-bottom-color:var(--matchc)}
+
+/* ---------- 활동3: 모양 상자 ---------- */
+.sorter-wrap{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:7vmin;width:100%;margin-top:12vmin}
+.box{position:relative;width:min(80vw,110vmin)}
+.lid{
+  background:var(--wood);border-radius:3vmin 3vmin 1vmin 1vmin;padding:4vmin 5vmin;
+  display:flex;justify-content:space-around;gap:4vmin;border-bottom:1.6vmin solid var(--wood-edge);
+}
+.box-front{height:7vmin;background:var(--wood-edge);border-radius:0 0 2.4vmin 2.4vmin;margin:0 2vmin}
+.hole{width:clamp(80px,17vmin,190px);aspect-ratio:1;display:grid;place-items:center}
+.hole svg{width:100%;height:100%}
+.hole.gulp{animation:gulp .45s ease}
+@keyframes gulp{50%{transform:scale(1.12)}}
+.box.shake{animation:shake .7s ease}
+@keyframes shake{20%{transform:rotate(-2deg)}40%{transform:rotate(2deg)}60%{transform:rotate(-1.5deg)}80%{transform:rotate(1deg)}}
+.blocks{display:flex;gap:3vmin;flex-wrap:wrap;justify-content:center;max-width:94vw}
+.block{width:clamp(80px,15vmin,170px);aspect-ratio:1;position:relative;z-index:3}
+.block svg{width:100%;height:100%;filter:drop-shadow(0 .8vmin 0 rgba(0,0,0,.18))}
+.block.flying{z-index:9;transition:transform .7s cubic-bezier(.3,.7,.3,1)}
+.block.dropped{transition:transform .3s ease-in,opacity .3s ease-in;opacity:0}
+
+/* ---------- 축하 / 자막 ---------- */
+.celebrate{position:absolute;inset:0;z-index:20;pointer-events:none;overflow:hidden;display:none}
+.celebrate.show{display:block}
+.celebrate .rise{position:absolute;bottom:-40vmin;width:16vmin;min-width:80px;animation:rise var(--t) ease-in forwards}
+@keyframes rise{to{transform:translateY(-150vh) rotate(var(--r))}}
+.caption{
+  position:absolute;top:8vmin;left:50%;transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--wall);
+  font-size:clamp(22px,4.8vmin,56px);padding:1.4vmin 4vmin;max-width:94vw;overflow:hidden;text-overflow:ellipsis;border-radius:999px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap
+}
+.caption.show{opacity:1}
+
+/* ---------- 교사 메뉴 ---------- */
+.corner{position:absolute;top:0;left:0;width:90px;height:90px;z-index:40}
+.corner .ring{position:absolute;top:14px;left:14px;width:40px;height:40px;border-radius:50%;border:5px solid var(--ink-soft);opacity:0;clip-path:inset(0 100% 0 0)}
+.corner.holding .ring{opacity:.6;animation:ring 3s linear forwards}
+@keyframes ring{to{clip-path:inset(0 0 0 0)}}
+.panel-bg{position:absolute;inset:0;z-index:50;background:rgba(20,28,45,.45);display:none;align-items:center;justify-content:center;padding:3vmin}
+.panel-bg.open{display:flex}
+.panel{
+  background:var(--panel);border-radius:24px;width:min(640px,100%);max-height:100%;overflow:auto;
+  padding:28px 28px 20px;font-size:18px;line-height:1.5;
+}
+.panel h2{margin:0 0 4px;font-weight:400;font-size:28px}
+.panel .sub{color:var(--ink-soft);font-size:15px;margin:0 0 18px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{padding:8px 16px;border-radius:999px;background:var(--wall);font-size:17px;min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--wall)}
+.seg button.chip[aria-pressed="true"]{background:var(--c);color:#fff}
+.seg button.chip{display:flex;align-items:center;gap:6px}
+.seg button.chip i{width:14px;height:14px;border-radius:50%;background:var(--c);border:2px solid #fff}
+.panel-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.panel-actions button{flex:1;min-height:52px;border-radius:14px;background:var(--wall);font-size:18px;padding:0 14px}
+.panel-actions button.primary{background:var(--ink);color:var(--wall)}
+.panel .note{color:var(--ink-soft);font-size:14px;margin-top:12px}
+
+@media (prefers-reduced-motion: reduce){
+  .celebrate .rise{animation-duration:6s}
+  .choice.wiggle,.box.shake,.hole.gulp{animation:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="floor" aria-hidden="true"></div>
+
+  <!-- 시작 화면 -->
+  <section class="screen active" id="s-start" aria-label="시작">
+    <div class="title-blocks" aria-label="색깔 모양 놀이">
+      <span class="tb" style="background:#E8433A">색</span>
+      <span class="tb" style="background:#FFC21A">깔</span>
+      <span class="tb gap"></span>
+      <span class="tb" style="background:#2F7DE1">모</span>
+      <span class="tb" style="background:#33B06A">양</span>
+      <span class="tb gap"></span>
+      <span class="tb" style="background:#E8433A">놀</span>
+      <span class="tb" style="background:#2F7DE1">이</span>
+    </div>
+    <button class="start-btn" id="startBtn" data-nav>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>
+      시작하기
+    </button>
+    <p class="start-note">선생님 메뉴는 화면 왼쪽 위 구석을 3초 누르거나 키보드 T 키로 열 수 있어요.</p>
+  </section>
+
+  <!-- 메뉴 -->
+  <section class="screen" id="s-menu" aria-label="놀이 고르기">
+    <div class="menu-row">
+      <button class="menu-card" data-nav data-go="act1" style="--accent:#E8433A">
+        <svg viewBox="0 0 100 100" aria-hidden="true" id="icon1"></svg><span>톡톡 풍선</span>
+      </button>
+      <button class="menu-card" data-nav data-go="act2" style="--accent:#FFC21A">
+        <svg viewBox="0 0 100 100" aria-hidden="true" id="icon2"></svg><span>같은 색 찾기</span>
+      </button>
+      <button class="menu-card" data-nav data-go="act3" style="--accent:#2F7DE1">
+        <svg viewBox="0 0 100 100" aria-hidden="true" id="icon3"></svg><span>모양 쏙쏙</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 활동1 -->
+  <section class="screen" id="s-act1" aria-label="톡톡 색깔 풍선">
+    <div class="field" id="field1"></div>
+    <div class="topbar"><div class="dots" id="dots1"></div></div>
+    <p class="hint" id="hint1"></p>
+  </section>
+
+  <!-- 활동2 -->
+  <section class="screen" id="s-act2" aria-label="같은 색 친구 찾기">
+    <div class="topbar"><div class="dots" id="dots2"></div></div>
+    <div class="match-wrap">
+      <div class="target" id="target2"></div>
+      <div class="choices" id="choices2"></div>
+    </div>
+    <p class="hint" id="hint2"></p>
+  </section>
+
+  <!-- 활동3 -->
+  <section class="screen" id="s-act3" aria-label="모양 쏙쏙 상자">
+    <div class="topbar"><div class="dots" id="dots3"></div></div>
+    <div class="sorter-wrap">
+      <div class="box" id="box3">
+        <div class="lid" id="lid3"></div>
+        <div class="box-front"></div>
+      </div>
+      <div class="blocks" id="blocks3"></div>
+    </div>
+    <p class="hint" id="hint3"></p>
+  </section>
+
+  <button class="home-btn" id="homeBtn" hidden aria-label="놀이 고르기로 돌아가기">
+    <span class="tip">한 번 더 누르면 처음으로</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5M6.5 10v9h11v-9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <div class="celebrate" id="celebrate" aria-hidden="true"></div>
+  <div class="caption" id="caption" role="status" aria-live="polite"></div>
+
+  <div class="corner" id="corner" aria-hidden="true"><div class="ring"></div></div>
+
+  <!-- 교사 메뉴 -->
+  <div class="panel-bg" id="panelBg">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle">
+      <h2 id="panelTitle">선생님 메뉴</h2>
+      <p class="sub">바꾼 설정은 다음 놀이부터 적용되고, 이 기기에 저장돼요.</p>
+
+      <div class="row"><span>효과음</span>
+        <div class="seg"><button data-nav data-k="sound" data-v="true">켜기</button><button data-nav data-k="sound" data-v="false">끄기</button></div></div>
+      <div class="row"><span>음성 읽어주기</span>
+        <div class="seg"><button data-nav data-k="voice" data-v="true">켜기</button><button data-nav data-k="voice" data-v="false">끄기</button></div></div>
+      <div class="row"><span>음성 속도</span>
+        <div class="seg"><button data-nav data-k="rate" data-v="slow">느리게</button><button data-nav data-k="rate" data-v="normal">보통</button></div></div>
+      <div class="row"><span>같은 색 찾기 선택지</span>
+        <div class="seg"><button data-nav data-k="choices" data-v="2">2개</button><button data-nav data-k="choices" data-v="3">3개</button></div></div>
+      <div class="row"><span>사용할 색 <small style="color:var(--ink-soft)">(2개 이상)</small></span>
+        <div class="seg" id="colorChips"></div></div>
+      <div class="row"><span>사용할 모양 <small style="color:var(--ink-soft)">(1개 이상)</small></span>
+        <div class="seg" id="shapeChips"></div></div>
+      <div class="row"><span>선생님 발문 보이기</span>
+        <div class="seg"><button data-nav data-k="hints" data-v="true">보이기</button><button data-nav data-k="hints" data-v="false">숨기기</button></div></div>
+
+      <div class="panel-actions">
+        <button data-nav id="fsBtn">전체화면</button>
+        <button data-nav id="toMenuBtn">놀이 고르기로</button>
+        <button data-nav class="primary" id="closePanel">닫기</button>
+      </div>
+      <p class="note" id="voiceNote"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   설정 — 색·모양·문구·발문은 여기서 바꾸면 됩니다
+   ========================================================= */
+const CONFIG = {
+  colors: {
+    red:    { noun:'빨간색', adj:'빨간', fill:'#E8433A', edge:'#B02A22' },
+    yellow: { noun:'노란색', adj:'노란', fill:'#FFC21A', edge:'#C48F00' },
+    blue:   { noun:'파란색', adj:'파란', fill:'#2F7DE1', edge:'#1C55A3' },
+    green:  { noun:'초록색', adj:'초록', fill:'#33B06A', edge:'#1D7A44' }
+  },
+  shapes: { circle:{ name:'동그라미' }, triangle:{ name:'세모' }, square:{ name:'네모' } },
+
+  balloonGoal: 10,     // 활동1: 터뜨릴 풍선 수
+  maxBalloons: 5,      // 활동1: 한 화면에 떠 있는 최대 풍선 수
+  matchRounds: 5,      // 활동2: 문제 수
+  blocksPerShape: 2,   // 활동3: 모양마다 블록 수(색이 다르게)
+
+  lines: {
+    hello: '색깔 모양 놀이, 시작!',
+    act1Start: '풍선을 톡 눌러 볼까?',
+    act3Start: '모양 친구들을 상자에 쏙 넣어 볼까?',
+    act3Done: '모두 쏙쏙! 다 넣었다!',
+    finish: '와, 다 했다! 짝짝짝!'
+  },
+
+  hints: {
+    act1: ['풍선이 둥실둥실 올라가요. 무슨 색 풍선을 눌러 볼까?', '우리 반에도 빨간색 물건이 있을까?', '○○이는 무슨 색 풍선이 좋아?', '노란 풍선은 어디 있지? 같이 찾아보자'],
+    act2: ['같은 색끼리 모아 볼까?', '○○이 옷은 무슨 색이야?', '우리 반에서 같은 색 물건을 찾아볼까?', '사과는 빨간색, 또 빨간색은 뭐가 있을까?'],
+    act3: ['동그라미는 데굴데굴 굴러가네', '세모는 뾰족뾰족, 손가락으로 따라 그려 볼까?', '네모 모양 물건을 찾아볼까?', '어느 구멍에 쏙 들어갈까?']
+  }
+};
+
+/* ---------- 그림(SVG) — viewBox 0 0 100 100 ---------- */
+const S = (fill, edge) => `fill="${fill}" stroke="${edge}" stroke-width="4" stroke-linejoin="round"`;
+const DRAW = {
+  ball:(c)=>`<circle cx="50" cy="52" r="38" ${S(c.fill,c.edge)}/><path d="M14 54 Q50 32 86 54" stroke="#fff" stroke-width="6" fill="none" opacity=".85"/><circle cx="36" cy="36" r="6" fill="#fff" opacity=".6"/>`,
+  car:(c)=>`<path d="M26 46 L35 26 H66 L77 46Z" ${S(c.fill,c.edge)}/><path d="M37 44 L42 31 H63 L69 44Z" fill="#DDF1FF"/><rect x="8" y="44" width="84" height="26" rx="10" ${S(c.fill,c.edge)}/><circle cx="28" cy="72" r="11" fill="#33383F"/><circle cx="72" cy="72" r="11" fill="#33383F"/><circle cx="28" cy="72" r="4" fill="#C9CED6"/><circle cx="72" cy="72" r="4" fill="#C9CED6"/>`,
+  umbrella:(c)=>`<path d="M50 50 V82 Q50 92 41 92 Q34 92 34 85" stroke="#5B4636" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M10 50 Q50 2 90 50 Q80 42 70 50 Q60 42 50 50 Q40 42 30 50 Q20 42 10 50Z" ${S(c.fill,c.edge)}/><circle cx="50" cy="16" r="4" fill="${c.edge}"/>`,
+  cup:(c)=>`<path d="M70 40 Q90 40 88 57 Q86 72 68 70" stroke="${c.edge}" stroke-width="7" fill="none"/><path d="M20 26 H74 L67 86 Q66 90 61 90 H33 Q28 90 27 86Z" ${S(c.fill,c.edge)}/><path d="M26 36 H68" stroke="#fff" stroke-width="5" opacity=".7" stroke-linecap="round"/>`,
+  fish:(c)=>`<path d="M72 50 L94 30 V70Z" ${S(c.fill,c.edge)}/><ellipse cx="44" cy="50" rx="32" ry="23" ${S(c.fill,c.edge)}/><circle cx="30" cy="45" r="6" fill="#fff"/><circle cx="29" cy="45" r="3" fill="#22304D"/><path d="M50 36 Q58 50 50 64" stroke="#fff" stroke-width="4" fill="none" opacity=".6"/>`,
+  apple:(c)=>`<path d="M50 30 C30 18 10 32 14 56 C18 80 36 92 50 84 C64 92 82 80 86 56 C90 32 70 18 50 30Z" ${S(c.fill,c.edge)}/><path d="M50 30 Q52 18 58 11" stroke="#6B4A2E" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M55 22 Q68 8 80 17 Q67 29 55 22Z" fill="#33B06A"/><ellipse cx="32" cy="46" rx="5" ry="9" fill="#fff" opacity=".5"/>`,
+  strawberry:(c)=>`<path d="M50 90 C26 74 12 52 21 36 C30 23 70 23 79 36 C88 52 74 74 50 90Z" ${S(c.fill,c.edge)}/><path d="M28 31 L42 30 L50 16 L58 30 L72 31 L60 39 L50 33 L40 39Z" fill="#33B06A" stroke="#1D7A44" stroke-width="3" stroke-linejoin="round"/><g fill="#FFE27A"><ellipse cx="38" cy="50" rx="2" ry="3"/><ellipse cx="54" cy="47" rx="2" ry="3"/><ellipse cx="66" cy="54" rx="2" ry="3"/><ellipse cx="45" cy="64" rx="2" ry="3"/><ellipse cx="59" cy="68" rx="2" ry="3"/><ellipse cx="50" cy="78" rx="2" ry="3"/></g>`,
+  banana:(c)=>`<path d="M20 30 Q22 80 70 84 Q87 84 90 74 Q60 74 45 57 Q33 43 31 26 Q25 21 20 30Z" ${S(c.fill,c.edge)}/><path d="M22 30 L18 20" stroke="#6B4A2E" stroke-width="6" stroke-linecap="round"/><path d="M30 40 Q36 64 60 74" stroke="#fff" stroke-width="4" fill="none" opacity=".55"/>`,
+  leaf:(c)=>`<path d="M18 84 Q12 30 84 16 Q92 72 18 84Z" ${S(c.fill,c.edge)}/><path d="M18 84 Q46 56 78 24" stroke="#fff" stroke-width="3.5" fill="none" opacity=".7"/><path d="M14 90 L22 80" stroke="#6B4A2E" stroke-width="5" stroke-linecap="round"/>`
+};
+// only: 정해진 색만 가지는 사물
+const ITEMS = [
+  { id:'ball', name:'공' }, { id:'car', name:'자동차' }, { id:'umbrella', name:'우산' },
+  { id:'cup', name:'컵' }, { id:'fish', name:'물고기' },
+  { id:'apple', name:'사과', only:'red' }, { id:'strawberry', name:'딸기', only:'red' },
+  { id:'banana', name:'바나나', only:'yellow' }, { id:'leaf', name:'나뭇잎', only:'green' }
+];
+const SHAPE_SVG = {
+  circle:(f,e,w=5)=>`<circle cx="50" cy="50" r="42" fill="${f}" stroke="${e}" stroke-width="${w}"/>`,
+  triangle:(f,e,w=5)=>`<path d="M50 8 L94 88 H6Z" fill="${f}" stroke="${e}" stroke-width="${w}" stroke-linejoin="round"/>`,
+  square:(f,e,w=5)=>`<rect x="10" y="10" width="80" height="80" rx="7" fill="${f}" stroke="${e}" stroke-width="${w}"/>`
+};
+const balloonSVG = c => `<svg viewBox="0 0 100 140" aria-hidden="true"><path d="M50 106 Q42 118 52 128 Q58 134 50 140" stroke="#7A879E" stroke-width="2.5" fill="none"/><path d="M44 106 L50 98 L56 106Z" fill="${c.edge}"/><path d="M50 6 C24 6 10 28 10 50 C10 76 32 96 50 100 C68 96 90 76 90 50 C90 28 76 6 50 6Z" fill="${c.fill}" stroke="${c.edge}" stroke-width="3"/><ellipse cx="33" cy="34" rx="8" ry="14" fill="#fff" opacity=".45" transform="rotate(-20 33 34)"/></svg>`;
+
+/* ---------- 설정 저장 ---------- */
+const DEFAULTS = { sound:true, voice:true, rate:'slow', choices:2,
+  colors:['red','yellow','blue','green'], shapes:['circle','triangle','square'], hints:true };
+const KEY = 'colorShapePlay.settings.v1';
+let settings = loadSettings();
+function loadSettings(){
+  try{ const raw = localStorage.getItem(KEY); if(raw) return { ...DEFAULTS, ...JSON.parse(raw) }; }catch(e){}
+  return { ...DEFAULTS };
+}
+function saveSettings(){ try{ localStorage.setItem(KEY, JSON.stringify(settings)); }catch(e){} }
+
+/* ---------- 유틸 ---------- */
+const $ = id => document.getElementById(id);
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const batchim = w => { const c=w.charCodeAt(w.length-1)-0xAC00; return c>=0 && c<11172 && c%28!==0; };
+const rang = w => w + (batchim(w)?'이랑':'랑');
+const iya  = w => w + (batchim(w)?'이야':'야');
+const col = k => CONFIG.colors[k];
+let timers = [], raf = 0;
+function later(fn, ms){ const id=setTimeout(fn, ms); timers.push(id); return id; }
+function clearAll(){ timers.forEach(clearTimeout); timers=[]; cancelAnimationFrame(raf); }
+// 영아용 탭: 누르는 순간 바로 반응(pointerdown), 키보드 엔터도 같은 동작
+function onTap(el, fn){
+  el.addEventListener('pointerdown', e => { e.preventDefault(); fn(e); });
+  el._act = fn;
+}
+
+/* ---------- 소리 (Web Audio 합성) ---------- */
+let ac = null;
+function audio(){
+  if(!ac){ try{ ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+  if(ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function tone(f1, f2, dur, type='sine', vol=.3, delay=0){
+  const c = audio(); if(!c || !settings.sound) return;
+  const t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f1, t);
+  if(f2) o.frequency.exponentialRampToValueAtTime(f2, t+dur);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+.01); g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t+dur+.05);
+}
+function noise(dur, freq, vol, delay=0){
+  const c = audio(); if(!c || !settings.sound) return;
+  const t = c.currentTime + delay, len = Math.floor(c.sampleRate*dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i] = (Math.random()*2-1) * (1 - i/len);
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = buf; f.type='bandpass'; f.frequency.value=freq; f.Q.value=.9; g.gain.value=vol;
+  s.connect(f).connect(g).connect(c.destination); s.start(t);
+}
+const sfx = {
+  pop(){ noise(.12, 1800, .6); tone(720, 150, .16, 'sine', .3); },
+  plunk(){ tone(1000, 240, .22, 'sine', .35); tone(170, 80, .22, 'triangle', .3, .14); },
+  chime(){ [784,988,1175].forEach((f,i)=>tone(f, 0, .7, 'sine', .16, i*.13)); },
+  clap(){ [0,.22,.44].forEach(d=>noise(.09, 1400, .8, d)); },
+  boing(){ tone(330, 520, .25, 'sine', .16); },
+  tap(){ tone(620, 0, .12, 'sine', .14); }
+};
+
+/* ---------- 음성 (Web Speech API) ---------- */
+let koVoice = null, voicesReady = false;
+function loadVoices(){
+  if(!('speechSynthesis' in window)) return;
+  const vs = speechSynthesis.getVoices();
+  if(vs.length){ voicesReady = true; koVoice = vs.find(v=>/^ko/i.test(v.lang)) || null; }
+  updateVoiceNote();
+}
+if('speechSynthesis' in window){ loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', loadVoices); }
+function say(text){
+  if(!settings.voice) return;
+  const ok = 'speechSynthesis' in window;
+  if(ok && !voicesReady) loadVoices();
+  if(ok && (koVoice || !voicesReady)){
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ko-KR'; if(koVoice) u.voice = koVoice;
+      u.rate = settings.rate === 'slow' ? .8 : 1; u.pitch = 1.15;
+      speechSynthesis.speak(u);
+      if(koVoice) return;
+    }catch(e){}
+  }
+  showCaption(text); // 한국어 음성이 없으면 큰 글자로 대신 보여줌
+}
+let capTimer = 0;
+function showCaption(text){
+  const el = $('caption'); el.textContent = text; el.classList.add('show');
+  clearTimeout(capTimer); capTimer = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+function updateVoiceNote(){
+  const n = $('voiceNote'); if(!n) return;
+  if(!('speechSynthesis' in window)) n.textContent = '이 브라우저는 음성 읽어주기를 지원하지 않아서, 이름을 화면에 큰 글자로 보여줘요.';
+  else if(voicesReady && !koVoice) n.textContent = '이 기기에 한국어 음성이 없어서, 이름을 화면에 큰 글자로 보여줘요.';
+  else n.textContent = '';
+}
+
+/* ---------- 화면 전환 ---------- */
+let current = 's-start';
+function goto(id){
+  clearAll(); try{ speechSynthesis.cancel(); }catch(e){}
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
+  current = id;
+  const home = $('homeBtn'); home.hidden = !id.startsWith('s-act'); home.classList.remove('armed');
+  if(id==='s-act1') startAct1();
+  if(id==='s-act2') startAct2();
+  if(id==='s-act3') startAct3();
+  const first = document.querySelector(`#${id} [data-nav]`); first?.focus({preventScroll:true});
+}
+function setHint(n){
+  const el = $('hint'+n); el.hidden = !settings.hints;
+  el.textContent = pick(CONFIG.hints['act'+n]);
+}
+function renderDots(el, total, on){ el.innerHTML = Array.from({length:total},(_,i)=>`<span class="dot${i<on?' on':''}"></span>`).join(''); }
+
+/* ---------- 축하 연출 ---------- */
+function celebrate(then){
+  const box = $('celebrate'); box.innerHTML = '';
+  const cs = settings.colors;
+  for(let i=0;i<9;i++){
+    const d = document.createElement('div'); d.className='rise';
+    d.style.left = (4 + i*10.5 + Math.random()*4) + '%';
+    d.style.setProperty('--t', (3 + Math.random()*1.5) + 's');
+    d.style.setProperty('--r', (Math.random()*30-15) + 'deg');
+    d.style.animationDelay = (Math.random()*.6) + 's';
+    d.innerHTML = balloonSVG(col(cs[i % cs.length]));
+    box.appendChild(d);
+  }
+  box.classList.add('show'); sfx.chime(); sfx.clap(); say(CONFIG.lines.finish);
+  later(()=>{ box.classList.remove('show'); box.innerHTML=''; then && then(); }, 4600);
+}
+
+/* =========================================================
+   활동1 — 톡톡 색깔 풍선
+   ========================================================= */
+let popped = 0, balloons = [], lastSpawn = 0, act1Done = false;
+function startAct1(){
+  popped = 0; balloons = []; act1Done = false; lastSpawn = 0;
+  $('field1').innerHTML = ''; renderDots($('dots1'), CONFIG.balloonGoal, 0); setHint(1);
+  later(()=>say(CONFIG.lines.act1Start), 300);
+  let prev = performance.now();
+  const loop = now => {
+    const dt = Math.min(64, now - prev) / 1000; prev = now;
+    const field = $('field1'), H = field.clientHeight, W = field.clientWidth;
+    if(!act1Done && balloons.length < CONFIG.maxBalloons && now - lastSpawn > 1300){ spawnBalloon(W, H); lastSpawn = now; }
+    balloons.forEach(b=>{
+      if(b.popped) return;
+      b.y -= b.v * dt; b.t += dt;
+      const sway = Math.sin(b.t * 1.2 + b.phase) * 10;
+      b.el.style.transform = `translate(${b.x + sway}px, ${b.y}px)`;
+      if(b.y < -b.el.offsetHeight - 20){ b.el.remove(); b.gone = true; }
+    });
+    balloons = balloons.filter(b=>!b.gone);
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+}
+function spawnBalloon(W, H){
+  const key = pick(settings.colors), c = col(key);
+  const el = document.createElement('button'); el.className = 'balloon'; el.setAttribute('data-nav','');
+  el.setAttribute('aria-label', c.noun + ' 풍선'); el.innerHTML = balloonSVG(c);
+  $('field1').appendChild(el);
+  const bw = el.offsetWidth || 160;
+  const b = { el, key, x: Math.random() * Math.max(10, W - bw), y: H + 10, v: H / (9 + Math.random()*3), t:0, phase: Math.random()*6, popped:false };
+  el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+  onTap(el, ()=>popBalloon(b));
+  balloons.push(b);
+}
+function popBalloon(b){
+  if(b.popped || act1Done) return;
+  b.popped = true; b.el.classList.add('popped'); sfx.pop(); say(col(b.key).noun + '!');
+  const r = b.el.getBoundingClientRect(), fr = $('field1').getBoundingClientRect();
+  for(let i=0;i<8;i++){
+    const s = document.createElement('span'); s.className='spark';
+    const a = i/8 * Math.PI*2, d = 70 + Math.random()*40;
+    s.style.left = (r.left - fr.left + r.width/2) + 'px'; s.style.top = (r.top - fr.top + r.width*.5) + 'px';
+    s.style.background = col(b.key).fill; s.style.setProperty('--dx', Math.cos(a)*d+'px'); s.style.setProperty('--dy', Math.sin(a)*d+'px');
+    $('field1').appendChild(s); setTimeout(()=>s.remove(), 550);
+  }
+  setTimeout(()=>{ b.el.remove(); b.gone = true; }, 320);
+  popped++; renderDots($('dots1'), CONFIG.balloonGoal, popped);
+  if(popped >= CONFIG.balloonGoal){ act1Done = true; later(()=>celebrate(()=>goto('s-menu')), 1200); }
+}
+
+/* =========================================================
+   활동2 — 같은 색 친구 찾기
+   ========================================================= */
+let round = 0, busy = false, cur = null;
+const itemsFor = k => ITEMS.filter(i=>!i.only || i.only===k);
+const itemSVG = (item, k) => `<svg viewBox="0 0 100 100" aria-hidden="true">${DRAW[item.id](col(k))}</svg>`;
+function startAct2(){ round = 0; renderDots($('dots2'), CONFIG.matchRounds, 0); newRound(); }
+function newRound(){
+  busy = false; setHint(2);
+  const cs = settings.colors, n = Math.min(settings.choices, cs.length);
+  const tc = pick(cs), pool = shuffle(itemsFor(tc)), target = pool[0], match = pool[1];
+  const others = shuffle(cs.filter(c=>c!==tc)).slice(0, n-1);
+  const opts = shuffle([{ item:match, k:tc, ok:true },
+    ...others.map(k=>({ item: pick(itemsFor(k).filter(i=>i.id!==match.id && i.id!==target.id)), k, ok:false }))]);
+  cur = { target, tc };
+
+  const t = $('target2'); t.className='target'; t.style.transform=''; t.innerHTML = itemSVG(target, tc);
+  t.setAttribute('aria-label', `${col(tc).adj} ${target.name}`);
+  const box = $('choices2'); box.innerHTML = '';
+  opts.forEach(o=>{
+    const b = document.createElement('button'); b.className='choice'; b.setAttribute('data-nav','');
+    b.setAttribute('aria-label', `${col(o.k).adj} ${o.item.name}`); b.innerHTML = itemSVG(o.item, o.k);
+    onTap(b, ()=>choose(b, o)); box.appendChild(b);
+  });
+  later(()=>say(`${col(tc).adj} ${target.name}! 같은 ${col(tc).noun} 친구는 어디 있을까?`), 350);
+}
+function choose(el, o){
+  if(busy) return;
+  const tc = cur.tc, tName = cur.target.name;
+  if(!o.ok){
+    sfx.boing(); el.classList.remove('wiggle'); void el.offsetWidth; el.classList.add('wiggle');
+    say(`이건 ${col(o.k).adj} ${iya(o.item.name)}. ${rang(tName)} 같은 ${col(tc).noun}은 어디 있을까?`);
+    return;
+  }
+  busy = true; sfx.chime();
+  say(`${col(tc).adj} ${rang(tName)} ${col(tc).adj} ${o.item.name}, 같은 색이네!`);
+  const T = $('target2').getBoundingClientRect(), M = el.getBoundingClientRect(), gap = 24;
+  const shift = (M.width + gap) / 2;
+  document.querySelectorAll('#choices2 .choice').forEach(c=>{ if(c!==el) c.classList.add('fade'); });
+  $('target2').style.transform = `translateX(${-shift}px)`;
+  const dx = (T.right - shift + gap) - M.left, dy = (T.top + T.height/2) - (M.top + M.height/2);
+  el.style.transform = `translate(${dx}px, ${dy}px)`;
+  [$('target2'), el].forEach(x=>{ x.style.setProperty('--matchc', col(tc).fill); x.classList.add('matched'); });
+  round++; renderDots($('dots2'), CONFIG.matchRounds, round);
+  later(()=> round >= CONFIG.matchRounds ? celebrate(()=>goto('s-menu')) : newRound(), 3200);
+}
+
+/* =========================================================
+   활동3 — 모양 쏙쏙 상자
+   ========================================================= */
+let placed = 0, totalBlocks = 0;
+function startAct3(){
+  placed = 0; setHint(3);
+  const lid = $('lid3'); lid.innerHTML = '';
+  settings.shapes.forEach(s=>{
+    const h = document.createElement('div'); h.className='hole'; h.dataset.shape = s;
+    h.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${SHAPE_SVG[s]('var(--hole)','var(--wood-edge)',4)}</svg>`;
+    lid.appendChild(h);
+  });
+  const list = [];
+  settings.shapes.forEach(s=>{
+    shuffle(settings.colors).slice(0, Math.min(CONFIG.blocksPerShape, settings.colors.length)).forEach(k=>list.push({ s, k }));
+  });
+  totalBlocks = list.length; renderDots($('dots3'), totalBlocks, 0);
+  const wrap = $('blocks3'); wrap.innerHTML = '';
+  shuffle(list).forEach(o=>{
+    const b = document.createElement('button'); b.className='block'; b.setAttribute('data-nav','');
+    const c = col(o.k);
+    b.setAttribute('aria-label', `${c.adj} ${CONFIG.shapes[o.s].name}`);
+    b.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${SHAPE_SVG[o.s](c.fill, c.edge)}</svg>`;
+    onTap(b, ()=>dropBlock(b, o)); wrap.appendChild(b);
+  });
+  later(()=>say(CONFIG.lines.act3Start), 350);
+}
+function dropBlock(el, o){
+  if(el._moving) return; el._moving = true;
+  const hole = document.querySelector(`#lid3 .hole[data-shape="${o.s}"]`);
+  const H = hole.getBoundingClientRect(), B = el.getBoundingClientRect();
+  const dx = (H.left + H.width/2) - (B.left + B.width/2), dy = (H.top + H.height/2) - (B.top + B.height/2);
+  const sc = (H.width / B.width) * .9;
+  say(`${col(o.k).adj} ${CONFIG.shapes[o.s].name}, 쏙!`);
+  el.classList.add('flying'); el.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`;
+  later(()=>{
+    sfx.plunk(); el.classList.remove('flying'); el.classList.add('dropped');
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(.1)`;
+    hole.classList.remove('gulp'); void hole.offsetWidth; hole.classList.add('gulp');
+    placed++; renderDots($('dots3'), totalBlocks, placed);
+    later(()=>{ el.style.visibility = 'hidden'; el.blur(); }, 320);
+    if(placed >= totalBlocks){
+      later(()=>{ $('box3').classList.remove('shake'); void $('box3').offsetWidth; $('box3').classList.add('shake'); say(CONFIG.lines.act3Done); }, 600);
+      later(()=>celebrate(()=>goto('s-menu')), 2600);
+    }
+  }, 720);
+}
+
+/* =========================================================
+   메뉴 아이콘 · 버튼 연결
+   ========================================================= */
+$('icon1').innerHTML = `<g transform="translate(6 4) scale(.5)">${balloonSVG(col('red')).replace(/<\/?svg[^>]*>/g,'')}</g><g transform="translate(44 18) scale(.5)">${balloonSVG(col('blue')).replace(/<\/?svg[^>]*>/g,'')}</g>`;
+$('icon2').innerHTML = `<g transform="translate(2 22) scale(.48)">${DRAW.apple(col('red'))}</g><g transform="translate(50 22) scale(.48)">${DRAW.strawberry(col('red'))}</g>`;
+$('icon3').innerHTML = `<rect x="8" y="46" width="84" height="40" rx="6" fill="#EBC793" stroke="#C2965A" stroke-width="4"/><g transform="translate(16 54) scale(.22)">${SHAPE_SVG.circle('#3B2E28','#3B2E28')}</g><g transform="translate(40 54) scale(.22)">${SHAPE_SVG.triangle('#3B2E28','#3B2E28')}</g><g transform="translate(64 54) scale(.22)">${SHAPE_SVG.square('#3B2E28','#3B2E28')}</g><g transform="translate(36 6) scale(.3)">${SHAPE_SVG.triangle('#FFC21A','#C48F00')}</g>`;
+
+onTap($('startBtn'), ()=>{ audio(); loadVoices(); sfx.tap(); say(CONFIG.lines.hello); goto('s-menu'); });
+document.querySelectorAll('[data-go]').forEach(b=>onTap(b, ()=>{ sfx.tap(); goto('s-' + b.dataset.go); }));
+
+let armTimer = 0;
+onTap($('homeBtn'), ()=>{
+  const h = $('homeBtn');
+  if(h.classList.contains('armed')){ clearTimeout(armTimer); goto('s-menu'); return; }
+  h.classList.add('armed'); armTimer = setTimeout(()=>h.classList.remove('armed'), 2200);
+});
+
+/* ---------- 교사 메뉴 ---------- */
+function openPanel(){ $('panelBg').classList.add('open'); renderPanel(); $('closePanel').focus(); }
+function closePanel(){ $('panelBg').classList.remove('open'); }
+function renderPanel(){
+  document.querySelectorAll('.panel [data-k]').forEach(b=>{
+    b.setAttribute('aria-pressed', String(settings[b.dataset.k]) === b.dataset.v);
+  });
+  $('colorChips').innerHTML = Object.entries(CONFIG.colors).map(([k,c])=>
+    `<button class="chip" data-nav data-color="${k}" style="--c:${c.fill}" aria-pressed="${settings.colors.includes(k)}"><i></i>${c.noun.replace('색','')}</button>`).join('');
+  $('shapeChips').innerHTML = Object.entries(CONFIG.shapes).map(([k,s])=>
+    `<button data-nav data-shape="${k}" aria-pressed="${settings.shapes.includes(k)}">${s.name}</button>`).join('');
+  updateVoiceNote();
+  $('fsBtn').hidden = !(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+}
+$('panelBg').addEventListener('click', e=>{
+  const b = e.target.closest('button');
+  if(e.target === $('panelBg')){ closePanel(); return; }
+  if(!b) return;
+  if(b.dataset.k){
+    const k = b.dataset.k, v = b.dataset.v;
+    settings[k] = v==='true' ? true : v==='false' ? false : (k==='choices' ? Number(v) : v);
+  } else if(b.dataset.color){
+    const k = b.dataset.color, has = settings.colors.includes(k);
+    if(has && settings.colors.length <= 2) return showCaption('색은 2개 이상 골라 주세요');
+    settings.colors = has ? settings.colors.filter(x=>x!==k) : Object.keys(CONFIG.colors).filter(x=>x===k || settings.colors.includes(x));
+  } else if(b.dataset.shape){
+    const k = b.dataset.shape, has = settings.shapes.includes(k);
+    if(has && settings.shapes.length <= 1) return showCaption('모양은 1개 이상 골라 주세요');
+    settings.shapes = has ? settings.shapes.filter(x=>x!==k) : Object.keys(CONFIG.shapes).filter(x=>x===k || settings.shapes.includes(x));
+  } else return;
+  saveSettings(); renderPanel();
+  if(b.dataset.k === 'hints') ['1','2','3'].forEach(n=>$('hint'+n).hidden = !settings.hints);
+  const sel = b.dataset.k ? `[data-k="${b.dataset.k}"][data-v="${b.dataset.v}"]` : b.dataset.color ? `[data-color="${b.dataset.color}"]` : `[data-shape="${b.dataset.shape}"]`;
+  document.querySelector('.panel ' + sel)?.focus();
+});
+$('closePanel').addEventListener('click', closePanel);
+$('toMenuBtn').addEventListener('click', ()=>{ closePanel(); goto(current==='s-start' ? 's-start' : 's-menu'); });
+$('fsBtn').addEventListener('click', ()=>{
+  try{
+    if(document.fullscreenElement) document.exitFullscreen();
+    else (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement)?.catch?.(()=>{});
+  }catch(e){}
+});
+
+// 왼쪽 위 구석 3초 누르기
+let holdTimer = 0;
+const corner = $('corner');
+corner.addEventListener('pointerdown', e=>{ e.preventDefault(); corner.classList.add('holding'); holdTimer = setTimeout(()=>{ corner.classList.remove('holding'); openPanel(); }, 3000); });
+['pointerup','pointerleave','pointercancel'].forEach(ev=>corner.addEventListener(ev, ()=>{ clearTimeout(holdTimer); corner.classList.remove('holding'); }));
+
+/* ---------- 키보드 · 리모컨 ---------- */
+document.addEventListener('keydown', e=>{
+  const panelOpen = $('panelBg').classList.contains('open');
+  if(e.key === 't' || e.key === 'T' || e.key === 'ㅅ'){ panelOpen ? closePanel() : openPanel(); e.preventDefault(); return; }
+  if(e.key === 'Escape' && panelOpen){ closePanel(); return; }
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+    const list = [...document.querySelectorAll(panelOpen ? '.panel [data-nav]' : `#${current} [data-nav]`)]
+      .concat(!panelOpen && !$('homeBtn').hidden ? [$('homeBtn')] : [])
+      .filter(el=>el.offsetParent !== null && el.style.visibility !== 'hidden' && !el.classList.contains('fade'));
+    if(!list.length) return;
+    const i = list.indexOf(document.activeElement);
+    const step = (e.key==='ArrowLeft' || e.key==='ArrowUp') ? -1 : 1;
+    list[(i + step + list.length) % list.length].focus(); e.preventDefault(); return;
+  }
+  if((e.key === 'Enter' || e.key === ' ') && document.activeElement?._act && !panelOpen){
+    e.preventDefault(); document.activeElement._act();
+  }
+});
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ try{ speechSynthesis.cancel(); }catch(e){} } });
+</script>
+</body>
+</html>
